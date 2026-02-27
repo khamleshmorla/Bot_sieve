@@ -15,11 +15,11 @@ TWITTER_API_BASE = "https://api.twitter.com/2"
 
 
 def _get_token() -> Optional[str]:
-    """Load and URL-decode the bearer token from environment."""
+    """Load the bearer token from environment exactly as provided."""
     token = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
     if not token:
         return None
-    return unquote(token)  # handles %2F → / and %3D → =
+    return token
 
 
 def _parse_account_age(created_at: str) -> int:
@@ -31,11 +31,17 @@ def _parse_account_age(created_at: str) -> int:
         return 365
 
 
-def fetch_tweets(hashtag: str, max_results: int = 100) -> Dict[str, Any]:
+def fetch_tweets(hashtag: str, max_results: int = 15) -> Dict[str, Any]:
     """
     Call Twitter API v2 recent search for a hashtag.
-    Returns: { tweets, users_map, error, count }
+    Results are cached for 10 minutes to save credits.
     """
+    from services.cache import analysis_cache
+    cache_key = f"tw_official_{hashtag.lower()}"
+    cached = analysis_cache.get(cache_key)
+    if cached:
+        return cached
+
     token = _get_token()
     if not token:
         return {"tweets": [], "users_map": {}, "error": "no_token", "count": 0}
@@ -44,9 +50,12 @@ def fetch_tweets(hashtag: str, max_results: int = 100) -> Dict[str, Any]:
     query_text = hashtag if hashtag.startswith("#") else f"#{hashtag}"
     full_query = f"{query_text} -is:retweet"
 
+    # Optimization: requesting only 15 results to save credits
+    results_to_fetch = min(max(10, max_results), 15)
+
     params = {
         "query": full_query,
-        "max_results": min(max(10, max_results), 100),
+        "max_results": results_to_fetch,
         "tweet.fields": "created_at,author_id,text,public_metrics",
         "user.fields": "created_at,public_metrics,description,profile_image_url,username,name",
         "expansions": "author_id",
@@ -70,12 +79,15 @@ def fetch_tweets(hashtag: str, max_results: int = 100) -> Dict[str, Any]:
         tweets = data.get("data", [])
         users_list = data.get("includes", {}).get("users", [])
         users_map = {u["id"]: u for u in users_list}
-        return {
+        result = {
             "tweets": tweets,
             "users_map": users_map,
             "error": None,
             "count": len(tweets),
         }
+        # Cache the successful result
+        analysis_cache.set(cache_key, result)
+        return result
     elif resp.status_code == 402:
         return {"tweets": [], "users_map": {}, "error": "credits_depleted", "count": 0}
     elif resp.status_code == 429:

@@ -16,19 +16,24 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # ── Twitter date formats ───────────────────────────────────────────────────
 
-def _parse_twitter_date(date_str: str) -> int:
-    """Parse Twitter v1-style date: 'Mon Jan 01 00:00:00 +0000 2024' → age days."""
+def _parse_twitter_date_obj(date_str: str) -> datetime:
+    """Parse Twitter v1-style date to datetime object."""
     if not date_str:
-        return 365
+        return datetime.now(timezone.utc)
     for fmt in ("%a %b %d %H:%M:%S %z %Y", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
         try:
             dt = datetime.strptime(date_str, fmt)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
-            return max(1, (datetime.now(timezone.utc) - dt).days)
+            return dt
         except ValueError:
             continue
-    return 365
+    return datetime.now(timezone.utc)
+
+def _parse_twitter_date(date_str: str) -> int:
+    """Parse Twitter v1-style date: 'Mon Jan 01 00:00:00 +0000 2024' → age days."""
+    dt = _parse_twitter_date_obj(date_str)
+    return max(1, (datetime.now(timezone.utc) - dt).days)
 
 # ── Internal schema helpers ────────────────────────────────────────────────
 
@@ -51,7 +56,13 @@ def _make_post(post_id: str, handle: str, text: str, timestamp: str) -> Dict:
 
 # ── Provider 1: twitter-api45.p.rapidapi.com ──────────────────────────────
 
-def _fetch_twitter_api45(hashtag: str, count: int = 50) -> Dict[str, Any]:
+def _fetch_twitter_api45(hashtag: str, count: int = 15) -> Dict[str, Any]:
+    from services.cache import analysis_cache
+    cache_key = f"ra_api45_{hashtag.lower()}"
+    cached = analysis_cache.get(cache_key)
+    if cached:
+        return cached
+
     key = os.getenv("RAPIDAPI_KEY", "").strip()
     if not key:
         return {"ok": False, "error": "no_key_api45"}
@@ -61,7 +72,7 @@ def _fetch_twitter_api45(hashtag: str, count: int = 50) -> Dict[str, Any]:
         "X-RapidAPI-Key": key,
         "X-RapidAPI-Host": "twitter-api45.p.rapidapi.com",
     }
-    params = {"query": query, "count": str(min(count, 50)), "result_type": "recent"}
+    params = {"query": query, "count": str(min(count, 15)), "result_type": "recent"}
 
     try:
         with httpx.Client(timeout=20.0) as client:
@@ -119,14 +130,17 @@ def _fetch_twitter_api45(hashtag: str, count: int = 50) -> Dict[str, Any]:
                 has_bio=bool((user_info.get("description") or "").strip()),
             )
 
+        iso_ts = _parse_twitter_date_obj(tw.get("created_at", "")).isoformat()
         posts.append(_make_post(
             post_id=str(tw.get("tweet_id", tw.get("id", ""))),
             handle=handle,
             text=tw.get("text", tw.get("full_text", ""))[:280],
-            timestamp=tw.get("created_at", datetime.utcnow().isoformat()),
+            timestamp=iso_ts,
         ))
 
-    return {"ok": True, "accounts": list(accounts.values()), "posts": posts, "source": "twitter-api45"}
+    result = {"ok": True, "accounts": list(accounts.values()), "posts": posts, "source": "twitter-api45"}
+    analysis_cache.set(cache_key, result)
+    return result
 
 # ── Provider 2: twttrapi.p.rapidapi.com (GraphQL) ─────────────────────────
 
@@ -166,18 +180,25 @@ def _parse_twttrapi_entries(entries: list) -> Tuple[Dict[str, Dict], List[Dict]]
                 )
 
             text = tweet_legacy.get("full_text") or tweet_legacy.get("text", "")
+            iso_ts = _parse_twitter_date_obj(tweet_legacy.get("created_at", "")).isoformat()
             posts.append(_make_post(
                 post_id=tweet_legacy.get("id_str", ""),
                 handle=handle,
                 text=text[:280],
-                timestamp=tweet_legacy.get("created_at", datetime.utcnow().isoformat()),
+                timestamp=iso_ts,
             ))
         except Exception:
             continue
 
     return accounts, posts
 
-def _fetch_twttrapi(hashtag: str, count: int = 50) -> Dict[str, Any]:
+def _fetch_twttrapi(hashtag: str, count: int = 15) -> Dict[str, Any]:
+    from services.cache import analysis_cache
+    cache_key = f"ra_twttr_{hashtag.lower()}"
+    cached = analysis_cache.get(cache_key)
+    if cached:
+        return cached
+
     key = os.getenv("TWTTR_RAPIDAPI_KEY", "").strip()
     if not key:
         return {"ok": False, "error": "no_key_twttr"}
@@ -223,7 +244,9 @@ def _fetch_twttrapi(hashtag: str, count: int = 50) -> Dict[str, Any]:
     if not posts:
         return {"ok": False, "error": "twttr_no_data"}
 
-    return {"ok": True, "accounts": list(accounts.values()), "posts": posts, "source": "twttrapi"}
+    result = {"ok": True, "accounts": list(accounts.values()), "posts": posts, "source": "twttrapi"}
+    analysis_cache.set(cache_key, result)
+    return result
 
 # ── Public entry point ─────────────────────────────────────────────────────
 

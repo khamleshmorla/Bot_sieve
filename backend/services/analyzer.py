@@ -115,29 +115,21 @@ def run_full_analysis(hashtag: str) -> Dict[str, Any]:
     posts: List[Dict] = []
     fetched = False
 
-    # ── Priority 0: Demo Intercept (100 Pre-programmed Tags) ───────────────
-    from services.demo_tags import DEMO_FAKE_TAGS, DEMO_REAL_TAGS
-    tag_lower = hashtag.lower()
-    
-    if tag_lower in DEMO_FAKE_TAGS:
-        data_source = "synthetic"
-        api_provider = "demo_intercept_fake"
-        api_status = "demo_forced"
-        from services.synthetic_generator import generate_accounts, generate_posts
-        accounts = generate_accounts(hashtag, n_bots=300, n_real=80)
-        posts = generate_posts(hashtag, accounts)
-        fetched = True
-    elif tag_lower in DEMO_REAL_TAGS:
-        data_source = "synthetic"
-        api_provider = "demo_intercept_organic"
-        api_status = "demo_forced"
-        from services.synthetic_generator import generate_accounts, generate_posts
-        # Generate organic-looking accounts: no real bots, just normal users
-        accounts = generate_accounts(hashtag, n_bots=0, n_real=60)
-        posts = generate_posts(hashtag, accounts)
-        fetched = True
+    # ── Priority 1: Official Twitter API v2 ────────────────────────────────
+    if not fetched:
+        try:
+            from services.twitter_client import fetch_tweets, map_to_accounts_and_posts
+            result = fetch_tweets(hashtag, max_results=15)
+            if result["error"] is None and result["count"] >= 3:
+                accounts, posts = map_to_accounts_and_posts(result, hashtag)
+                api_provider = "twitter_official_v2"
+                fetched = True
+            else:
+                api_status = result.get("error", "twitter_no_data")
+        except Exception as e:
+            api_status = f"twitter_exception: {e}"
 
-    # ── Priority 1: RapidAPI (two providers) ───────────────────────────────
+    # ── Priority 2: RapidAPI (two providers) ───────────────────────────────
     if not fetched:
         try:
             from services.rapidapi_client import fetch_real_tweets
@@ -151,20 +143,6 @@ def run_full_analysis(hashtag: str) -> Dict[str, Any]:
                 api_status = rapid_result.get("error", "rapidapi_no_data")
         except Exception as e:
             api_status = f"rapidapi_exception: {e}"
-
-    # ── Priority 2: Official Twitter API v2 ────────────────────────────────
-    if not fetched:
-        try:
-            from services.twitter_client import fetch_tweets, map_to_accounts_and_posts
-            result = fetch_tweets(hashtag, max_results=100)
-            if result["error"] is None and result["count"] >= 5:
-                accounts, posts = map_to_accounts_and_posts(result, hashtag)
-                api_provider = "twitter_official_v2"
-                fetched = True
-            else:
-                api_status = result.get("error", "twitter_no_data")
-        except Exception as e:
-            api_status = f"twitter_exception: {e}"
 
     # ── Priority 3: Synthetic fallback ─────────────────────────────────────
     if not fetched:
@@ -239,7 +217,7 @@ def run_full_analysis(hashtag: str) -> Dict[str, Any]:
     alerts = build_alerts(hashtag, scored_accounts, posts, spike, copy_paste)
     factors = build_explainability(scored_accounts, copy_paste, spike, bot_accounts)
 
-    # 9. Top suspicious accounts
+    # 9. Top analyzed accounts (sorted by bot score descending)
     top_suspicious = [
         {
             "handle": a["handle"],
@@ -248,8 +226,7 @@ def run_full_analysis(hashtag: str) -> Dict[str, Any]:
             "followers": a.get("followers", 0),
             "tweets": a.get("tweet_count", 0),
         }
-        for a in scored_accounts
-        if a.get("bot_score", 0) > 40
+        for a in sorted(scored_accounts, key=lambda x: x.get("bot_score", 0), reverse=True)
     ][:8]
 
     return {

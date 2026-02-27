@@ -393,7 +393,7 @@ const Index = () => {
               </DashboardCard>
 
               <DashboardCard
-                title="Suspicious Accounts"
+                title="Analyzed Accounts"
                 icon={<Users className="w-3.5 h-3.5" />}
                 badge={`${data.suspicious_accounts.length}`}
               >

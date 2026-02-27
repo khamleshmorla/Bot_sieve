@@ -1,18 +1,43 @@
 """
-Sentiment Analyzer — uses VADER (rule-based, no training required)
+Sentiment Analyzer — uses Hugging Face pretrained models with VADER (rule-based) fallback.
 Creates an hourly sentiment timeline from posts.
 """
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from typing import List, Dict, Any
 from collections import defaultdict
 from datetime import datetime
 
+# Initialize VADER as baseline/fallback
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+_vader_analyzer = SentimentIntensityAnalyzer()
 
-_analyzer = SentimentIntensityAnalyzer()
-
+# Attempt to load Hugging Face Transformers pipeline
+_hf_analyzer = None
+try:
+    from transformers import pipeline
+    # Use a small, fast Hugging Face sentiment model mapping to POSITIVE/NEGATIVE
+    _hf_analyzer = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english", truncation=True)
+    print("[INFO] Successfully loaded Hugging Face sentiment model.")
+except Exception as e:
+    print(f"[WARN] Hugging Face sentiment model not loaded. Falling back to VADER. Error: {e}")
 
 def analyze_post(text: str) -> Dict[str, float]:
-    scores = _analyzer.polarity_scores(text)
+    """Analyzes text sentiment. Uses Hugging Face if available, otherwise VADER."""
+    if _hf_analyzer:
+        try:
+            result = _hf_analyzer(text[:512])[0]
+            label = result['label'].upper()
+            score = result['score']
+            
+            # Map HF to positive/negative/neutral format
+            if label == "POSITIVE":
+                return {"positive": score, "negative": 1.0 - score, "neutral": 0.0, "compound": score}
+            else:
+                return {"positive": 1.0 - score, "negative": score, "neutral": 0.0, "compound": -score}
+        except Exception:
+            pass # fallback to vader if HF inference fails
+
+    # VADER fallback
+    scores = _vader_analyzer.polarity_scores(text)
     return {
         "positive": scores["pos"],
         "negative": scores["neg"],

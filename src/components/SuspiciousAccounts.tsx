@@ -24,7 +24,7 @@ export const SuspiciousAccounts = ({ accounts }: SuspiciousAccountsProps) => {
   if (!accounts.length) {
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-2">
-        <p className="text-xs text-muted-foreground">No suspicious accounts found</p>
+        <p className="text-xs text-muted-foreground">No accounts analyzed</p>
       </div>
     );
   }
@@ -54,7 +54,14 @@ export const SuspiciousAccounts = ({ accounts }: SuspiciousAccountsProps) => {
             {/* Info */}
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-mono text-foreground truncate">{acc.handle}</span>
+                <a
+                  href={`https://twitter.com/${acc.handle.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono text-primary hover:underline truncate"
+                >
+                  {acc.handle}
+                </a>
                 <span className="text-[10px] text-muted-foreground flex-shrink-0">{acc.accountAge}d old</span>
               </div>
               <RiskBar value={acc.botScore} />
