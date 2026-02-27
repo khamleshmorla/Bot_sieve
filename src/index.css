@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Background scale */
+    --background: 222 20% 6%;
+    --foreground: 210 18% 88%;
+
+    --card: 222 18% 9%;
+    --card-foreground: 210 18% 88%;
+
+    --popover: 222 18% 9%;
+    --popover-foreground: 210 18% 88%;
+
+    /* Brand — muted cyan, not neon */
+    --primary: 187 72% 47%;
+    --primary-foreground: 222 20% 6%;
+
+    --secondary: 222 14% 14%;
+    --secondary-foreground: 210 14% 70%;
+
+    --muted: 222 14% 12%;
+    --muted-foreground: 215 12% 45%;
+
+    --accent: 187 55% 35%;
+    --accent-foreground: 210 18% 88%;
+
+    /* Semantic */
+    --destructive: 4 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 36 88% 52%;
+    --warning-foreground: 222 20% 6%;
+
+    --success: 145 60% 42%;
+    --success-foreground: 222 20% 6%;
+
+    /* Borders */
+    --border: 222 14% 15%;
+    --input: 222 14% 15%;
+    --ring: 187 72% 47%;
+
+    --radius: 0.625rem;
+
+    /* Custom glow tokens — subtle */
+    --glow-primary: 187 72% 47%;
+    --glow-danger: 4 72% 55%;
+    --glow-warning: 36 88% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border box-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  code, .font-mono, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+}
+
+@layer utilities {
+  /* Subtle glows — not neon, just depth */
+  .glow-primary {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.12),
+      0 0 24px -4px hsl(var(--primary) / 0.15);
+  }
+  .glow-danger {
+    box-shadow:
+      0 0 0 1px hsl(var(--destructive) / 0.15),
+      0 0 24px -4px hsl(var(--destructive) / 0.12);
+  }
+  .glow-warning {
+    box-shadow:
+      0 0 0 1px hsl(var(--warning) / 0.15),
+      0 0 16px -4px hsl(var(--warning) / 0.1);
+  }
+
+  .text-glow-primary {
+    text-shadow: 0 0 18px hsl(var(--primary) / 0.45);
+  }
+  .text-glow-danger {
+    text-shadow: 0 0 16px hsl(var(--destructive) / 0.45);
+  }
+
+  /* Surfaces */
+  .surface-elevated {
+    background: hsl(222 16% 11%);
+  }
+  .gradient-radial-primary {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(var(--primary) / 0.07) 0%, transparent 60%),
+      hsl(var(--background));
+  }
+  .border-glow {
+    border-color: hsl(var(--primary) / 0.25);
+  }
+
+  /* Glass card */
+  .glass {
+    background: hsl(222 18% 10% / 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-border/60;
+  }
+
+  /* Status dot */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  /* Stat block */
+  .stat-row {
+    @apply flex items-center justify-between py-2 border-b border-border/50 last:border-0;
+  }
+
+  /* Animations */
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(1.25); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg,
+      hsl(var(--secondary)) 25%,
+      hsl(222 14% 18%) 50%,
+      hsl(var(--secondary)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.35s ease both;
+  }
+}
