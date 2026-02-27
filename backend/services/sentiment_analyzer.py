@@ -56,7 +56,10 @@ def build_sentiment_timeline(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]
         "fake_count": 0, "organic_count": 0,
     })
 
-    for post in posts:
+    # Cap at 500 to prevent HF pipeline inference from hanging the thread on large synthetic datasets
+    sample_posts = posts[:500] if len(posts) > 500 else posts
+
+    for post in sample_posts:
         try:
             ts = datetime.fromisoformat(post["timestamp"])
         except Exception:

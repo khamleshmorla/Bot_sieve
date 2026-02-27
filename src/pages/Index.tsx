@@ -10,12 +10,14 @@ import { AttackScoreGauge } from "@/components/AttackScoreGauge";
 import { SentimentChart } from "@/components/SentimentChart";
 import { AlertFeed } from "@/components/AlertFeed";
 import { SuspiciousAccounts } from "@/components/SuspiciousAccounts";
-import { ClusterVisualization } from "@/components/ClusterVisualization";
 import { ExplainabilityPanel } from "@/components/ExplainabilityPanel";
 import { FakeOrganicMeter } from "@/components/FakeOrganicMeter";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { checkHealth } from "@/services/api";
 import { useState, useEffect, useRef } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /* ─── Skeleton ─────────────────────────────────────────── */
 const SkeletonBlock = ({ h = "h-8" }: { h?: string }) => (
@@ -312,106 +314,110 @@ const Index = () => {
 
         {/* ── Dashboard ─────────────────────────────────────── */}
         {showDashboard && (
-          <div className="space-y-4">
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList className="bg-secondary/50 border border-border/50 p-1">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="intelligence" className="text-xs sm:text-sm">Intelligence</TabsTrigger>
+              <TabsTrigger value="network" className="text-xs sm:text-sm">Network</TabsTrigger>
+            </TabsList>
 
-            {/* Row 1 — Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <DashboardCard
-                title="Fakeness Score"
-                icon={<Shield className="w-3.5 h-3.5" />}
-                glowVariant={data.fakeness_score >= 60 ? "danger" : "none"}
-                badge={`${data.fakeness_score}%`}
-              >
-                <AttackScoreGauge score={data.fakeness_score} label="Fakeness Level" />
-              </DashboardCard>
+            {/* Tab 1: Overview */}
+            <TabsContent value="overview" className="space-y-4 outline-none">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <DashboardCard
+                  title="Fakeness Score"
+                  icon={<Shield className="w-3.5 h-3.5" />}
+                  glowVariant={data.fakeness_score >= 60 ? "danger" : "none"}
+                  badge={`${data.fakeness_score}%`}
+                >
+                  <AttackScoreGauge score={data.fakeness_score} label="Fakeness Level" />
+                </DashboardCard>
 
-              <DashboardCard
-                title="Bot Activity"
-                icon={<Bot className="w-3.5 h-3.5" />}
-                glowVariant={data.bot_score >= 60 ? "danger" : "none"}
-                badge={`${data.bot_score}%`}
-              >
-                <AttackScoreGauge score={data.bot_score} label="Bot Probability" />
-              </DashboardCard>
+                <DashboardCard
+                  title="Bot Activity"
+                  icon={<Bot className="w-3.5 h-3.5" />}
+                  glowVariant={data.bot_score >= 60 ? "danger" : "none"}
+                  badge={`${data.bot_score}%`}
+                >
+                  <AttackScoreGauge score={data.bot_score} label="Bot Probability" />
+                </DashboardCard>
 
-              <DashboardCard
-                title="Real vs Fake"
-                icon={<BarChart3 className="w-3.5 h-3.5" />}
-                glowVariant="none"
-              >
-                <FakeOrganicMeter fakePercent={data.fake_percent} />
-              </DashboardCard>
+                <DashboardCard
+                  title="Real vs Fake"
+                  icon={<BarChart3 className="w-3.5 h-3.5" />}
+                  glowVariant="none"
+                >
+                  <FakeOrganicMeter fakePercent={data.fake_percent} />
+                </DashboardCard>
 
-              <DashboardCard
-                title="Summary"
-                icon={<Activity className="w-3.5 h-3.5" />}
-              >
-                <div>
-                  <StatRow label="Total Posts" value={data.total_posts.toLocaleString()} />
-                  <StatRow label="Suspicious Posts" value={data.suspicious_posts.toLocaleString()} accent />
-                  <StatRow label="Accounts" value={data.total_accounts.toLocaleString()} />
-                  <StatRow label="Fake Accounts" value={data.fake_accounts.toLocaleString()} accent />
-                  <StatRow
-                    label="Copy-paste Score"
-                    value={`${data.copy_paste_score}%`}
-                    warning={data.copy_paste_score >= 40 && data.copy_paste_score < 70}
-                    accent={data.copy_paste_score >= 70}
-                  />
-                </div>
-              </DashboardCard>
-            </div>
+                <DashboardCard
+                  title="Summary"
+                  icon={<Activity className="w-3.5 h-3.5" />}
+                >
+                  <div>
+                    <StatRow label="Total Posts" value={data.total_posts.toLocaleString()} />
+                    <StatRow label="Suspicious Posts" value={data.suspicious_posts.toLocaleString()} accent />
+                    <StatRow label="Accounts" value={data.total_accounts.toLocaleString()} />
+                    <StatRow label="Fake Accounts" value={data.fake_accounts.toLocaleString()} accent />
+                    <StatRow
+                      label="Copy-paste Score"
+                      value={`${data.copy_paste_score}%`}
+                      warning={data.copy_paste_score >= 40 && data.copy_paste_score < 70}
+                      accent={data.copy_paste_score >= 70}
+                    />
+                  </div>
+                </DashboardCard>
+              </div>
 
-            {/* Row 2 — Chart + Alerts */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <DashboardCard
-                title="Sentiment & Bot Activity Over Time"
-                icon={<TrendingUp className="w-3.5 h-3.5" />}
-                className="lg:col-span-2"
-              >
-                <SentimentChart data={data.sentiment_timeline} />
-              </DashboardCard>
+              <div className="grid grid-cols-1 gap-4">
+                <DashboardCard
+                  title="Sentiment & Bot Activity Over Time"
+                  icon={<TrendingUp className="w-3.5 h-3.5" />}
+                >
+                  <SentimentChart data={data.sentiment_timeline} />
+                </DashboardCard>
+              </div>
+            </TabsContent>
 
-              <DashboardCard
-                title="Recent Alerts"
-                icon={<AlertTriangle className="w-3.5 h-3.5" />}
-                glowVariant={data.alerts.some(a => a.severity === "critical") ? "danger" : "none"}
-                badge={`${data.alerts.length}`}
-              >
-                <AlertFeed alerts={data.alerts} />
-              </DashboardCard>
-            </div>
+            {/* Tab 2: Intelligence */}
+            <TabsContent value="intelligence" className="space-y-4 outline-none">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DashboardCard
+                  title="Recent Alerts"
+                  icon={<AlertTriangle className="w-3.5 h-3.5" />}
+                  glowVariant={data.alerts.some(a => a.severity === "critical") ? "danger" : "none"}
+                  badge={`${data.alerts.length}`}
+                >
+                  <AlertFeed alerts={data.alerts} />
+                </DashboardCard>
 
-            {/* Row 3 — Clusters + Accounts + Explainability */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <DashboardCard
-                title="Bot Network Clusters"
-                icon={<Network className="w-3.5 h-3.5" />}
-                glowVariant="primary"
-                badge={`${data.clusters.length} groups`}
-              >
-                <ClusterVisualization clusters={data.clusters} />
-              </DashboardCard>
+                <DashboardCard
+                  title="Detection Signals"
+                  icon={<Brain className="w-3.5 h-3.5" />}
+                  glowVariant="primary"
+                >
+                  <ExplainabilityPanel factors={data.explainability} />
+                </DashboardCard>
+              </div>
+            </TabsContent>
 
-              <DashboardCard
-                title="Analyzed Accounts"
-                icon={<Users className="w-3.5 h-3.5" />}
-                badge={`${data.suspicious_accounts.length}`}
-              >
-                <SuspiciousAccounts accounts={data.suspicious_accounts} />
-              </DashboardCard>
-
-              <DashboardCard
-                title="Detection Signals"
-                icon={<Brain className="w-3.5 h-3.5" />}
-                glowVariant="primary"
-              >
-                <ExplainabilityPanel factors={data.explainability} />
-              </DashboardCard>
-            </div>
-
-          </div>
+            {/* Tab 3: Network */}
+            <TabsContent value="network" className="space-y-4 outline-none">
+              <div className="grid grid-cols-1 gap-4">
+                <DashboardCard
+                  title="Analyzed Accounts"
+                  icon={<Users className="w-3.5 h-3.5" />}
+                  badge={`${data.suspicious_accounts.length}`}
+                >
+                  <SuspiciousAccounts accounts={data.suspicious_accounts} />
+                </DashboardCard>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 };

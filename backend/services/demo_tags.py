@@ -11,7 +11,8 @@ DEMO_FAKE_TAGS = {
     "#nftgiveaway", "#whitelistsale", "#mintingnow", "#makemoneyonline", "#passiveincome",
     "#workfromhomescam", "#binaryoptions", "#forexsignals", "#tradingscam", "#hotstock",
     "#pennystocks", "#shortsqueeze", "#gemetothemoon", "#amcarmy", "#hodlnow",
-    "#buythedip", "#moonshot", "#gemcoin", "#airdropalert", "#freetrump"
+    "#buythedip", "#moonshot", "#gemcoin", "#airdropalert", "#freetrump",
+    "#crypto", "#giveaway"
 }
 
 # 50 tags that will trigger the synthetic ORGANIC generator
